@@ -1,0 +1,13 @@
+{
+  "name": "rocket-packing-ratios",
+  "version": "0.1.0",
+  "title": "Rocket Packing Ratios",
+  "author": "Sythiex",
+  "factorio_version": "2.1",
+  "space_travel_required": true,
+  "dependencies": [
+    "base >= 2.1.0",
+    "space-age >= 2.1.0"
+  ],
+  "description": "Compares the rocket capacity of finished items with the ingredients needed to craft them."
+}
