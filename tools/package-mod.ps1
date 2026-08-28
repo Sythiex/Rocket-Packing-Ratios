@@ -43,6 +43,11 @@ if ([string]::IsNullOrWhiteSpace($modInfo.name) -or
     throw "info.json must define non-empty name and version values."
 }
 
+$productionControlPath = Join-Path $projectRoot "control.lua"
+if (Test-Path -LiteralPath $productionControlPath -PathType Leaf) {
+    throw "The release mod must remain data-stage-only; production control.lua is not allowed."
+}
+
 $packageName = "$($modInfo.name)_$($modInfo.version)"
 $packageRoot = [System.IO.Path]::GetFullPath((Join-Path $stagingRoot $packageName))
 $packageZip = [System.IO.Path]::GetFullPath((Join-Path $destinationRoot "$packageName.zip"))
@@ -75,7 +80,6 @@ $requiredRootFiles = @(
     "README.md"
 )
 $optionalRootFiles = @(
-    "control.lua",
     "data.lua",
     "data-updates.lua",
     "settings.lua",

@@ -52,9 +52,12 @@ Use the smallest relevant checks:
 1. Validate JSON and PowerShell syntax.
 2. Check Lua module paths, locale keys, rich-text item names, and deterministic ordering.
 3. Run pure calculation fixtures once those modules exist.
-4. Run `& .\tools\run-factorio.ps1 -Mode SmokeTest` for an isolated Factorio 2.1 load.
-5. Inspect `.factorio-test/factorio-current.log` before claiming a game-backed pass.
-6. Visually check native tooltip adjacency, wrapping, and Factoriopedia rendering before release.
+4. Run `& .\tools\run-factorio.ps1 -Mode SelfTest` for the isolated fixture suite, including engine-backed item-weight comparisons.
+5. Run `& .\tools\run-factorio.ps1 -Mode SmokeTest` for an isolated Factorio 2.1 release-mod load.
+6. Inspect `.factorio-test/factorio-current.log` before claiming a game-backed pass.
+7. Visually check native tooltip adjacency, wrapping, and Factoriopedia rendering before release.
+
+The Factorio runner packages the source, creates a clean save, and reloads it with every writable game path isolated under `.factorio-test/`. `SelfTest` additionally stages the unpublished fixture mod from `tests/`; release ZIPs must never contain its `control.lua` or other test code. Generated runner files stay ignored by Git.
 
 Create `.factorio-local.json` from the tracked example if needed:
 
@@ -67,13 +70,14 @@ Create `.factorio-local.json` from the tracked example if needed:
 Useful commands:
 
 ```powershell
+& .\tools\run-factorio.ps1 -Mode SelfTest
 & .\tools\run-factorio.ps1 -Mode SmokeTest
 & .\tools\run-factorio.ps1 -Mode Create
 & .\tools\run-factorio.ps1 -Mode Gui
 & .\tools\install-local.ps1 -WhatIf
 ```
 
-`tools/package-mod.ps1` owns the release allowlist and ZIP layout. Keep packages, test saves, logs, and write-data out of Git. `tools/install-local.ps1` deliberately writes to the configured Factorio installation; agents may check it with `-WhatIf` but must not install without an explicit request.
+`tools/package-mod.ps1` owns the release allowlist and ZIP layout. Release archives use Factorio's required `rocket-packing-ratios_<version>/` root directory and exclude repository metadata, documentation, tools, tests, and isolated game state. Keep packages, test saves, logs, and write-data out of Git. `tools/install-local.ps1` deliberately writes to the configured Factorio installation; agents may check it with `-WhatIf` but must not install without an explicit request.
 
 ## External references
 

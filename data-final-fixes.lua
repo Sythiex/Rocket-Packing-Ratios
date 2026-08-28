@@ -1,2 +1,3 @@
--- Rocket packing ratio tooltip generation belongs in this final data stage.
--- See docs/design.md for the accepted calculation and compatibility behavior.
+local pipeline = require("scripts.pipeline")
+
+pipeline.run(data.raw, defines.prototypes.item)

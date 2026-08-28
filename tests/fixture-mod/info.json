@@ -1,0 +1,12 @@
+{
+  "name": "rocket-packing-ratios-test",
+  "version": "0.0.1",
+  "title": "Rocket Packing Ratios isolated test fixtures",
+  "author": "Sythiex",
+  "factorio_version": "2.1",
+  "dependencies": [
+    "base >= 2.1.0",
+    "rocket-packing-ratios = 0.1.0"
+  ],
+  "description": "Unpublished fixtures for Rocket Packing Ratios."
+}

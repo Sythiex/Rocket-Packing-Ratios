@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet("Create", "SmokeTest", "Gui")]
+    [ValidateSet("Create", "SmokeTest", "SelfTest", "Gui")]
     [string]$Mode = "SmokeTest"
 )
 
@@ -33,6 +33,11 @@ $stagingRoot = Join-Path $testRoot "staging"
 $savesRoot = Join-Path $testRoot "saves"
 $configPath = Join-Path $testRoot "config.ini"
 $savePath = Join-Path $savesRoot "rocket-packing-ratios-smoke.zip"
+$selfTestSavePath = Join-Path $savesRoot "rocket-packing-ratios-self-test.zip"
+$testDriverSource = Join-Path $projectRoot "tests\fixture-mod"
+$testDriverPackageRoot = Join-Path $stagingRoot "rocket-packing-ratios-test_0.0.1"
+$testDriverZipPath = Join-Path $modsRoot "rocket-packing-ratios-test_0.0.1.zip"
+$isSelfTest = $Mode -eq "SelfTest"
 
 foreach ($directory in @($testRoot, $modsRoot, $stagingRoot, $savesRoot)) {
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
@@ -44,6 +49,21 @@ $packageArguments = @{
 }
 $package = & (Join-Path $PSScriptRoot "package-mod.ps1") @packageArguments
 
+if (Test-Path -LiteralPath $testDriverZipPath -PathType Leaf) {
+    Remove-Item -LiteralPath $testDriverZipPath -Force
+}
+if ($isSelfTest) {
+    if (-not (Test-Path -LiteralPath $testDriverSource -PathType Container)) {
+        throw "Self-test fixture mod is missing: $testDriverSource"
+    }
+    if (Test-Path -LiteralPath $testDriverPackageRoot) {
+        Remove-Item -LiteralPath $testDriverPackageRoot -Recurse -Force
+    }
+    Copy-Item -LiteralPath $testDriverSource -Destination $testDriverPackageRoot -Recurse
+    Compress-Archive -LiteralPath $testDriverPackageRoot -DestinationPath $testDriverZipPath `
+        -CompressionLevel Optimal
+}
+
 $modList = @{
     mods = @(
         @{ name = "base"; enabled = $true },
@@ -51,7 +71,8 @@ $modList = @{
         @{ name = "quality"; enabled = $true },
         @{ name = "recycler"; enabled = $true },
         @{ name = "space-age"; enabled = $true },
-        @{ name = $package.ModName; enabled = $true }
+        @{ name = $package.ModName; enabled = $true },
+        @{ name = "rocket-packing-ratios-test"; enabled = $isSelfTest }
     )
 } | ConvertTo-Json -Depth 4
 Set-Content -LiteralPath (Join-Path $modsRoot "mod-list.json") -Value $modList -Encoding utf8NoBOM
@@ -107,6 +128,30 @@ function New-IsolatedSave {
     Invoke-FactorioHeadless ($commonArguments + @("--create", $savePath))
 }
 
+function Invoke-SelfTest {
+    if (Test-Path -LiteralPath $selfTestSavePath -PathType Leaf) {
+        Remove-Item -LiteralPath $selfTestSavePath -Force
+    }
+    Invoke-FactorioHeadless ($commonArguments + @("--create", $selfTestSavePath))
+    Invoke-FactorioHeadless ($commonArguments + @(
+        "--benchmark", $selfTestSavePath,
+        "--benchmark-ticks", "1",
+        "--benchmark-runs", "1"
+    ))
+
+    $logPath = Join-Path $testRoot "factorio-current.log"
+    $logText = Get-Content -LiteralPath $logPath -Raw
+    $expectedPass = "[Rocket Packing Ratios test driver] PASS"
+    $diagnosticPattern = '(?im)^\s*\d+\.\d+\s+(Error|Warning)\b'
+    if (-not $logText.Contains($expectedPass) -or
+        $logText.Contains("[Rocket Packing Ratios test driver] FAIL") -or
+        $logText -match $diagnosticPattern -or
+        -not $logText.Contains("Goodbye")) {
+        throw "Self-test did not report a warning-free PASS and clean shutdown. Inspect $logPath"
+    }
+    Write-Output "PASS: Rocket Packing Ratios fixtures and engine weights passed in isolated Factorio 2.1."
+}
+
 switch ($Mode) {
     "Create" {
         New-IsolatedSave
@@ -127,6 +172,9 @@ switch ($Mode) {
             throw "Smoke test did not confirm the mod load and clean shutdown. Inspect $logPath"
         }
         Write-Output "PASS: Rocket Packing Ratios loaded and reloaded in isolated Factorio 2.1."
+    }
+    "SelfTest" {
+        Invoke-SelfTest
     }
     "Gui" {
         if (-not (Test-Path -LiteralPath $savePath -PathType Leaf)) {
